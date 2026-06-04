@@ -16,21 +16,22 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     print(f"[START] {settings.app_name} starting...")
 
-    # Auto-create tables if they don't exist
-    from app.core.database import Base
-    # Import all models so Base.metadata knows about them
-    import app.models  # noqa: F401
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    print("[OK] Database tables ready.")
+    if settings.initialize_database:
+        # Local-development convenience. Production deployments use migrations.
+        from app.core.database import Base
+        import app.models  # noqa: F401
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("[OK] Database tables ready.")
 
-    # Start background sync scheduler
-    await start_scheduler()
-    print("[OK] Sync scheduler started.")
+    if settings.enable_scheduler:
+        await start_scheduler()
+        print("[OK] Sync scheduler started.")
 
     yield
 
-    await stop_scheduler()
+    if settings.enable_scheduler:
+        await stop_scheduler()
     await engine.dispose()
     print("[STOP] ByteOps API shutting down.")
 

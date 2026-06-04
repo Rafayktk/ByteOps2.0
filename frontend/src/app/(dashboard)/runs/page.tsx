@@ -1,4 +1,5 @@
 import "@xyflow/react/dist/style.css";
+import { Suspense } from "react";
 import { ActionCenter } from "@/components/runs/action-center";
 
 export const metadata = { title: "Execution Trace — ByteOps" };
@@ -9,7 +10,9 @@ export default function RunsRoute() {
             className="h-screen flex flex-col overflow-hidden"
             style={{ background: "var(--background)" }}
         >
-            <ActionCenter />
+            <Suspense fallback={null}>
+                <ActionCenter />
+            </Suspense>
         </div>
     );
 }

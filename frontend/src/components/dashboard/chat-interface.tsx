@@ -465,7 +465,7 @@ export function ChatInterface({
         }
         setAttachedFile(null);
         setIsTyping(true);
-        let chatTimeoutId: ReturnType<typeof window.setTimeout> | null = null;
+        let chatTimeoutId: number | null = null;
 
         const userMessage: Message = {
             id: Date.now().toString(),

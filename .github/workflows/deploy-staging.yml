@@ -1,0 +1,79 @@
+name: Deploy Staging
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "infrastructure/terraform/staging/**"
+      - ".github/workflows/deploy-staging.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: byteops-staging-deploy
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: "574009336630"
+  AWS_DEPLOY_ROLE_ARN: arn:aws:iam::574009336630:role/byteops-staging-github-deploy
+  API_REPOSITORY: byteops-staging-api
+  WORKER_REPOSITORY: byteops-staging-worker
+  FRONTEND_REPOSITORY: byteops-staging-frontend
+  NEXT_PUBLIC_API_URL: https://bcsrqykmzu2344bp5urt2emhni0ohvhx.lambda-url.us-east-1.on.aws
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_dXAtZ25hdC04My5jbGVyay5hY2NvdW50cy5kZXYk
+  TF_WORKING_DIR: infrastructure/terraform/staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Lambda images
+        env:
+          REGISTRY: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build --platform linux/amd64 --provenance=false -f backend/Dockerfile.lambda -t "$REGISTRY/$API_REPOSITORY:$IMAGE_TAG" backend
+          docker build --platform linux/amd64 --provenance=false -f backend/Dockerfile.worker -t "$REGISTRY/$WORKER_REPOSITORY:$IMAGE_TAG" backend
+          docker build --platform linux/amd64 --provenance=false \
+            --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
+            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" \
+            -f frontend/Dockerfile.lambda -t "$REGISTRY/$FRONTEND_REPOSITORY:$IMAGE_TAG" frontend
+          docker push "$REGISTRY/$API_REPOSITORY:$IMAGE_TAG"
+          docker push "$REGISTRY/$WORKER_REPOSITORY:$IMAGE_TAG"
+          docker push "$REGISTRY/$FRONTEND_REPOSITORY:$IMAGE_TAG"
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_api_image_uri: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.API_REPOSITORY }}:${{ github.sha }}
+          TF_VAR_worker_image_uri: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.WORKER_REPOSITORY }}:${{ github.sha }}
+          TF_VAR_frontend_image_uri: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.FRONTEND_REPOSITORY }}:${{ github.sha }}
+          TF_VAR_aws_profile: ""
+        run: |
+          terraform init
+          terraform apply -auto-approve
+
+      - name: Smoke test
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          API_URL="$(terraform output -raw api_url)"
+          FRONTEND_URL="$(terraform output -raw frontend_url)"
+          curl --fail --retry 5 --retry-delay 5 "${API_URL}health"
+          curl --fail --retry 5 --retry-delay 5 "$FRONTEND_URL"

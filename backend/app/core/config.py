@@ -1,7 +1,26 @@
 """ByteOps backend application configuration."""
 
-from pydantic_settings import BaseSettings
+import json
+import os
 from functools import lru_cache
+
+from pydantic_settings import BaseSettings
+
+
+def _load_aws_secret() -> None:
+    """Load a Secrets Manager JSON object into the process environment once."""
+    secret_id = os.environ.get("AWS_SECRETS_ID")
+    if not secret_id or os.environ.get("_BYTEOPS_AWS_SECRET_LOADED") == "1":
+        return
+
+    import boto3
+
+    response = boto3.client("secretsmanager").get_secret_value(SecretId=secret_id)
+    values = json.loads(response["SecretString"])
+    for key, value in values.items():
+        if value is not None:
+            os.environ.setdefault(key, str(value))
+    os.environ["_BYTEOPS_AWS_SECRET_LOADED"] = "1"
 
 
 class Settings(BaseSettings):
@@ -10,6 +29,9 @@ class Settings(BaseSettings):
     # --- App ---
     app_name: str = "ByteOps API"
     debug: bool = False
+    initialize_database: bool = True
+    enable_scheduler: bool = True
+    sync_queue_url: str = ""
 
     # --- Database (Neon PostgreSQL) ---
     database_url: str = "postgresql+asyncpg://localhost/byteops"
@@ -74,4 +96,5 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Cached settings instance."""
+    _load_aws_secret()
     return Settings()

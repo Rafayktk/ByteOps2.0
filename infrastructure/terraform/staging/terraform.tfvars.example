@@ -1,0 +1,5 @@
+api_image_uri       = "574009336630.dkr.ecr.us-east-1.amazonaws.com/byteops-staging-api:COMMIT_SHA"
+worker_image_uri    = "574009336630.dkr.ecr.us-east-1.amazonaws.com/byteops-staging-worker:COMMIT_SHA"
+frontend_image_uri  = "574009336630.dkr.ecr.us-east-1.amazonaws.com/byteops-staging-frontend:COMMIT_SHA"
+alert_email         = "you@example.com"
+monthly_budget_usd  = 25

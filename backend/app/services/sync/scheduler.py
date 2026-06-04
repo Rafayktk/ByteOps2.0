@@ -14,6 +14,7 @@ scheduler lifecycle.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from uuid import UUID
 
@@ -80,11 +81,30 @@ async def trigger_immediate_sync(user_id: UUID, tool_type: ToolType) -> None:
     Fire-and-forget — creates a background asyncio task so the OAuth
     callback can return the redirect without waiting.
     """
+    from app.core.config import get_settings
+
+    queue_url = get_settings().sync_queue_url
+    if queue_url:
+        import boto3
+
+        boto3.client("sqs").send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(
+                {
+                    "job_type": "sync_one",
+                    "user_id": str(user_id),
+                    "tool_type": tool_type.value,
+                }
+            ),
+        )
+        logger.info("Immediate sync published for %s user=%s", tool_type, user_id)
+        return
+
     asyncio.create_task(
         _run_single_sync(user_id=user_id, tool_type=tool_type),
         name=f"sync_{tool_type}_{user_id}",
     )
-    logger.info("Immediate sync queued for %s user=%s", tool_type, user_id)
+    logger.info("Immediate sync queued locally for %s user=%s", tool_type, user_id)
 
 
 # ── Internal runners ──────────────────────────────────────────────────────────
