@@ -48,6 +48,47 @@ be updated to allow the generated callback URLs before OAuth flows will work.
 - Dropbox: `https://bcsrqykmzu2344bp5urt2emhni0ohvhx.lambda-url.us-east-1.on.aws/api/auth/dropbox/callback`
 - Trello: `https://bcsrqykmzu2344bp5urt2emhni0ohvhx.lambda-url.us-east-1.on.aws/api/auth/trello/callback`
 
+These URLs must also be registered in each provider's developer console. AWS
+cannot configure OAuth applications owned by external provider accounts.
+
+| Provider | Where to add the callback URL |
+|---|---|
+| Google Gmail and Calendar | Google Cloud Console -> APIs & Services -> Credentials -> OAuth 2.0 Client -> Authorized redirect URIs. Add both Gmail and Calendar callback URLs. |
+| Atlassian Jira | Atlassian Developer Console -> app -> Authorization -> OAuth 2.0 (3LO) -> Callback URL. Add the Jira callback URL. |
+| GitHub | GitHub Settings -> Developer settings -> OAuth Apps -> app -> Authorization callback URL. |
+| Slack | Slack API Apps -> app -> OAuth & Permissions -> Redirect URLs. |
+| Dropbox | Dropbox App Console -> app -> OAuth 2 -> Redirect URIs. |
+| Trello | Trello Power-Up/API application settings. Register the Trello callback URL where the application was created. |
+
+Google reports `redirect_uri_mismatch` and Atlassian reports
+`redirect_uri is not registered for client` until these exact HTTPS URLs are
+saved. They are case-sensitive and must not contain a trailing slash.
+
+## Local Staging Lifecycle Scripts
+
+Run these from the repository root using the locally configured
+`byteops-bootstrap` AWS CLI profile:
+
+```powershell
+.\scripts\deploy-staging.ps1
+.\scripts\destroy-staging.ps1 -PlanOnly
+.\scripts\destroy-staging.ps1
+```
+
+`deploy-staging.ps1` validates AWS access, creates missing ECR bootstrap
+repositories, builds and pushes all Lambda images, applies Terraform, updates
+Secrets Manager from the ignored local `.env`, synchronizes generated callback
+URLs, and runs live frontend/API smoke tests.
+
+`destroy-staging.ps1` requires typing `DESTROY BYTEOPS STAGING` before running
+Terraform destroy. It deletes staging Lambda, ECR images/repositories, SQS,
+Secrets Manager, schedules, alarms, budget, and staging IAM roles. It
+intentionally retains the Terraform state S3 bucket and shared GitHub OIDC
+provider so staging can be recreated. After destroy, GitHub Actions deployment
+cannot assume its staging role until `deploy-staging.ps1` recreates it locally.
+Use `-PlanOnly` to preview everything Terraform would delete without changing
+AWS.
+
 ## 1. Goal
 
 Deploy ByteOps using a serverless-first AWS architecture:

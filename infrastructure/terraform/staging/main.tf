@@ -38,6 +38,7 @@ resource "aws_iam_role_policy_attachment" "github_deploy_admin" {
 resource "aws_ecr_repository" "api" {
   name                 = "${local.name}-api"
   image_tag_mutability = "IMMUTABLE"
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -47,6 +48,7 @@ resource "aws_ecr_repository" "api" {
 resource "aws_ecr_repository" "worker" {
   name                 = "${local.name}-worker"
   image_tag_mutability = "IMMUTABLE"
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -56,6 +58,7 @@ resource "aws_ecr_repository" "worker" {
 resource "aws_ecr_repository" "frontend" {
   name                 = "${local.name}-frontend"
   image_tag_mutability = "IMMUTABLE"
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -93,8 +96,9 @@ locals {
 }
 
 resource "aws_secretsmanager_secret" "app" {
-  name                    = "${local.name}/application"
-  recovery_window_in_days = 7
+  name                           = "${local.name}/application"
+  force_overwrite_replica_secret = true
+  recovery_window_in_days        = 0
 }
 
 resource "aws_sqs_queue" "jobs_dlq" {
