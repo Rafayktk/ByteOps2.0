@@ -66,6 +66,15 @@ def create_app() -> FastAPI:
     app.include_router(workflows.router)
     app.include_router(sync.router)
 
+    @app.get("/")
+    async def root_status():
+        return {
+            "status": "online",
+            "service": settings.app_name,
+            "health": "/health",
+            "docs": "/docs",
+        }
+
     @app.get("/health")
     async def health_check():
         return {"status": "healthy", "service": settings.app_name}

@@ -259,6 +259,12 @@ resource "aws_lambda_function" "frontend" {
   memory_size   = 2048
   architectures = ["x86_64"]
 
+  environment {
+    variables = {
+      AWS_SECRETS_ID = aws_secretsmanager_secret.app.name
+    }
+  }
+
   depends_on = [
     aws_cloudwatch_log_group.frontend,
     aws_iam_role_policy_attachment.lambda_logs,
@@ -268,7 +274,7 @@ resource "aws_lambda_function" "frontend" {
 resource "aws_lambda_function_url" "frontend" {
   function_name      = aws_lambda_function.frontend.function_name
   authorization_type = "NONE"
-  invoke_mode        = "RESPONSE_STREAM"
+  invoke_mode        = "BUFFERED"
 }
 
 resource "aws_lambda_permission" "frontend_public_function_url" {

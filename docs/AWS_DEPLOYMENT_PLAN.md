@@ -22,6 +22,11 @@ As of June 4, 2026, the staging backend foundation is deployed in AWS account
 | Frontend | Deployed on Lambda with the AWS Lambda Web Adapter |
 | GitHub Actions activation | Active through OIDC for `Rafayktk/ByteOps2.0` `main`; CI and staging deployment runs verified |
 
+The frontend Lambda loads its Clerk secret from Secrets Manager during startup.
+Its Function URL uses buffered responses because Next.js SSR did not produce a
+valid response body through the initial streaming configuration. Deployment
+smoke tests require non-empty frontend HTML containing `ByteOps`.
+
 The generated backend URL is suitable for staging tests. OAuth providers must
 be updated to allow the generated callback URLs before OAuth flows will work.
 
