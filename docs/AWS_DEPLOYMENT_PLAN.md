@@ -20,7 +20,7 @@ As of June 4, 2026, the staging backend foundation is deployed in AWS account
 | AWS Budget | Deployed at `$25/month`; no email notification until an alert email is provided |
 | PostgreSQL | Using managed Neon PostgreSQL, not a local database |
 | Frontend | Deployed on Lambda with the AWS Lambda Web Adapter |
-| GitHub Actions activation | OIDC deploy role created for `Rafayktk/ByteOps2.0` `main`; workflows deploy after this code is pushed |
+| GitHub Actions activation | Active through OIDC for `Rafayktk/ByteOps2.0` `main`; CI and staging deployment runs verified |
 
 The generated backend URL is suitable for staging tests. OAuth providers must
 be updated to allow the generated callback URLs before OAuth flows will work.
