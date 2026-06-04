@@ -91,6 +91,9 @@ AWS.
 
 ## 1. Goal
 
+For a detailed resource-by-resource explanation of the deployed staging
+environment, see [AWS_DEPLOYMENT_DETAILS.md](./AWS_DEPLOYMENT_DETAILS.md).
+
 Deploy ByteOps using a serverless-first AWS architecture:
 
 - FastAPI backend on AWS Lambda
